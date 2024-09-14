@@ -1,9 +1,8 @@
 const mongoose=require('mongoose')
-
-mongoose.connect('mongodb://0.0.0.0:27017/telbot')
+require("dotenv").config();
+mongoose.connect(process.env.MongoDb_url)
   .then(() => console.log('Connected! Your db'));
 const Schema = mongoose.Schema;
-
 
 const TelSchema = new Schema({
   username: String,
