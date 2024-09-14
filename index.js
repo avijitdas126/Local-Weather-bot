@@ -43,11 +43,11 @@ bot.hears('/now', async (ctx) => {
    
      }
      else{
-       ctx.reply(`${data.message}. Set Your local city correctly using /setlocal`)
+       ctx.reply(`${data.message}. Set Your local city correctly using /setlocal [Name of your local city]`)
      }
     }
     else{
-      ctx.reply(`Frist, Set Your local city correctly using /setlocal`)
+      ctx.reply(`Frist, Set Your local city correctly using /setlocal [Name of your local city]`)
     }
 
 
@@ -84,7 +84,7 @@ ctx.reply( `Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${win
 
   }
   else{
-    ctx.reply(`${data.message}. Set Your local city correctly using /setlocal`)
+    ctx.reply(`${data.message}. Set Your local city correctly using  /weather [Name of another city]`)
   }
     }
 })
