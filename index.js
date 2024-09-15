@@ -43,7 +43,7 @@ bot.hears('/now', async (ctx) => {
   let weather=data.weather[0].description
 await ctx.deleteMessage(msgid)
     try{
-await bot.telegram.sendPhoto( bot.chat.id,{url:imgurl},{caption:`Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}`} );
+await bot.telegram.sendPhoto( ctx.chat.id,{url:imgurl},{caption:`Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}`} );
     }
     catch(err){
       ctx.reply('We are facing some difficulties')
@@ -102,7 +102,7 @@ bot.on(message('text'), async (ctx) => {
   let weather=data.weather[0].description
 await ctx.deleteMessage(msgid)
     try{
-await bot.telegram.sendPhoto( bot.chat.id,{url:imgurl},{caption:`Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}`} );
+await bot.telegram.sendPhoto( ctx.chat.id,{url:imgurl},{caption:`Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}`} );
     }
     catch(err){
       ctx.reply('We are facing some difficulties')
