@@ -101,7 +101,7 @@ bot.on(message('text'), async (ctx) => {
     let text=(ctx.update.message.text)
     if(text.includes('/setlocal')){
       count(ctx.update.message.from.id)
-        let city=text.split(' ')[1]
+        let city=text.split('/setlocal ')[1]
          if(city){
         let id=ctx.update.message.from.id
          let obj={useid:id,local:city}
@@ -125,7 +125,7 @@ bot.on(message('text'), async (ctx) => {
     else if(text.includes('/weather')){
       count(ctx.update.message.from.id)
   let { message_id:msgid }=await ctx.replyWithSticker('CAACAgIAAxkBAAIBmmbmtyxl__PM1i4wsKcHKljraZGsAAIwFAACV03ASHMUDFXjRXH1NgQ')
-  let city=text.split(' ')[1]
+  let city=text.split('/weather ')[1]
       if(city){
   let data=await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${token[random()]}&units=metric`)
   data=await data.json()
