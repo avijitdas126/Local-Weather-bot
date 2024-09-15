@@ -2,6 +2,7 @@ const { Telegraf } = require("telegraf");
 const { message } = require("telegraf/filters");
 require("dotenv").config();
 const {Telbot,Tel} =require('./modul')
+const safe=require('./safe');
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 //when bot start
