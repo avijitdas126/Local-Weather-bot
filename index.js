@@ -36,13 +36,19 @@ bot.hears('/now', async (ctx) => {
       let data=await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.OpenWeather_Token}&units=metric`)
      data=await data.json()
      if(data.cod==200){
-     let temp=data.main.temp;
-     let wind=data.wind.speed
-     let weather=data.weather[0].description
-   await ctx.deleteMessage(msgid)
-   ctx.reply( `Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}` );
-   
-     }
+    let imgurl=`https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`
+  let temp=data.main.temp;
+  let wind=data.wind.speed
+  let weather=data.weather[0].description
+await ctx.deleteMessage(msgid)
+    try{
+await bot.telegram.sendPhoto( bot.chat.id,{url:imgurl},{caption:`Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}`} );
+    }
+    catch(err){
+      ctx.reply('We are facing some difficulties')
+      console.log(err);
+    }
+    }
      else{
        await ctx.deleteMessage(msgid)
        ctx.reply(`${data.message}. Set Your local city correctly using /setlocal [Name of your local city]`)
