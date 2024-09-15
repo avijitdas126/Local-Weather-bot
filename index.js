@@ -62,7 +62,7 @@ bot.start(async (ctx) => {
 bot.hears('/now', async (ctx) => {
     let city=await Tel.find({userid:ctx.update.message.from.id})
     count(ctx.update.message.from.id)
-      if(city){
+      if(city.length!=0){
         let { message_id:msgid }=await ctx.replyWithSticker('CAACAgIAAxkBAAIBmmbmtyxl__PM1i4wsKcHKljraZGsAAIwFAACV03ASHMUDFXjRXH1NgQ')
       city=city[0].local.toLowerCase()
       let data=await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${token[random()]}&units=metric`)
