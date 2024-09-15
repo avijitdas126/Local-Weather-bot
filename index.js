@@ -54,10 +54,14 @@ bot.hears('/now', async (ctx) => {
 
 
 })
+bot.help((ctx)=>{
+  ctx.reply('Bot Command:\n\n1.\t /now -\t\t Know your local weather immediately.\n2. /weather [Name of another city] -\t Know the weather of another city immediately.\n3. /setlocal [Name of your local city] -\t Set your local city.\n Further any problem contact our developer @avijit126');
+})
 bot.on(message('text'), async (ctx) => {
     let text=(ctx.update.message.text)
     if(text.includes('/setlocal')){
         let city=text.split(' ')[1]
+         if(city.length!=0){
         let id=ctx.update.message.from.id
          let obj={useid:id,local:city}
        try {
@@ -70,26 +74,40 @@ bot.on(message('text'), async (ctx) => {
         ctx.reply('Your Local City is added sucessfully.\nIf immediately know your current weather when you\nwill type /now. 😊')
       } catch (err) {
         ctx.reply('Your Local City is added unsucessfully.Try again.')
-        console.error('Error inserting/updating user:', err);
+        console.log('Error inserting/updating user:', err.message);
+      }
+         }
+      else{
+        ctx.reply('Enter a valid city using  /weather [Name of another city] command\nExample:- /weather Kolkata,/weather Tokyo');
       }
     }
     else if(text.includes('/weather')){
-      let { message_id:msgid }=await ctx.reply(`Hi ${ctx.update.message.from.first_name},wait for few seconds`)
+  let { message_id:msgid }=await ctx.reply(`Hi ${ctx.update.message.from.first_name},wait for few seconds`)
   let city=text.split(' ')[1]
+      if(city.length!=0){
   let data=await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.OpenWeather_Token}&units=metric`)
   
   data=await data.json()
   if(data.cod==200){
+    let imgurl=`https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`
   let temp=data.main.temp;
   let wind=data.wind.speed
   let weather=data.weather[0].description
 await ctx.deleteMessage(msgid)
-ctx.reply( `Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}` );
-
-  }
+    try{
+await ctx.telegram.sendPhoto( {url:imgurl},{caption:`Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}`} );
+    }
+    catch(err){
+      bot.reply('We are facing some difficulties')
+    }
+    }
   else{
     ctx.reply(`${data.message}. Set Your local city correctly using  /weather [Name of another city]`)
   }
+    }
+      else{
+        ctx.reply('Enter a valid city using  /weather [Name of another city] command\nExample:- /weather Kolkata,/weather Tokyo');
+      }
     }
   else{
     ctx.reply(`This bot only responsive on below this commands\n1.\t /now -\t\t Know your local weather immediately.\n2. /weather [Name of another city] -\t Know the weather of another city immediately.\n3. /setlocal [Name of your local city] -\t Set your local city.`)
