@@ -30,7 +30,8 @@ bot.start(async (ctx) => {
 });
 bot.hears('/now', async (ctx) => {
     let city=await Tel.find({userid:ctx.update.message.from.id})
-    if(city.length){
+      if(city.length){
+        let { message_id:msgid }=await ctx.reply(`Hi ${ctx.update.message.from.first_name},wait for few seconds`)
       city=city[0].local.toLowerCase()
       let data=await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.OpenWeather_Token}&units=metric`)
      data=await data.json()
@@ -38,16 +39,17 @@ bot.hears('/now', async (ctx) => {
      let temp=data.main.temp;
      let wind=data.wind.speed
      let weather=data.weather[0].description
-   
+   await ctx.deleteMessage(msgid)
    ctx.reply( `Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}` );
    
      }
      else{
+       await ctx.deleteMessage(msgid)
        ctx.reply(`${data.message}. Set Your local city correctly using /setlocal [Name of your local city]`)
      }
     }
     else{
-      ctx.reply(`Frist, Set Your local city correctly using /setlocal [Name of your local city]`)
+      ctx.reply(`First, Set Your local city correctly using /setlocal [Name of your local city]`)
     }
 
 
@@ -72,14 +74,16 @@ bot.on(message('text'), async (ctx) => {
       }
     }
     else if(text.includes('/weather')){
-        let city=text.split(' ')[1]
-        let data=await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.OpenWeather_Token}&units=metric`)
+      let { message_id:msgid }=await ctx.reply(`Hi ${ctx.update.message.from.first_name},wait for few seconds`)
+  let city=text.split(' ')[1]
+  let data=await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${process.env.OpenWeather_Token}&units=metric`)
+  
   data=await data.json()
   if(data.cod==200){
   let temp=data.main.temp;
   let wind=data.wind.speed
   let weather=data.weather[0].description
-
+await ctx.deleteMessage(msgid)
 ctx.reply( `Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity} percentenge\nNation: ${data.sys.country}` );
 
   }
@@ -87,6 +91,9 @@ ctx.reply( `Name: ${data.name}\nTemperature: ${temp} degree Celsius\nWind: ${win
     ctx.reply(`${data.message}. Set Your local city correctly using  /weather [Name of another city]`)
   }
     }
+  else{
+    ctx.reply(`This bot only responsive on below this commands\n1.\t /now -\t\t Know your local weather immediately.\n2. /weather [Name of another city] -\t Know the weather of another city immediately.\n3. /setlocal [Name of your local city] -\t Set your local city.`)
+  }
 })
 //launch a bot
 bot.launch();
