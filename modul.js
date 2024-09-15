@@ -8,6 +8,10 @@ const TelSchema = new Schema({
   username: String,
   name: String,
   userid:String,
+  count:{
+    type:Number,
+    default:0,
+  }
 });
 const TelUse = new Schema({
     local:String,
