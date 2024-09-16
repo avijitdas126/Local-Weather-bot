@@ -36,3 +36,7 @@ MongoDb_url=<YOUR-MONGODB-URL>
 * Telegraf.js
 * Mongodb
 * Mongoose
+
+## Scan and use my bot and give feedback on this github's issues 
+ <img src="https://i.ibb.co/Wt0NHZd/20240916-111102.jpg" alt="qr code"/>
+ 
