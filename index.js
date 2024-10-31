@@ -1,5 +1,7 @@
 const { Telegraf } = require("telegraf");
 const { message } = require("telegraf/filters");
+const express=require("express");
+const app=express();
 require("dotenv").config();
 const {Telbot,Tel} =require('./modul')
 const safe=require('./safe');
@@ -10,6 +12,7 @@ function random(){
    let ran=Math.floor(Math.random()*n)
    return ran
 }
+
 async function count(id) {
   try {
     // Find the user by their `userid`
@@ -33,12 +36,18 @@ async function count(id) {
     console.log('Error occurred:', error);
   }
 }
-
+const webhookUrl = `${process.env.SERVER}/webhook`;
+let play =async()=>{
+  // Set the webhook for the bot
+  await bot.telegram.setWebhook(webhookUrl);
+}
+play()
 //when bot start
 bot.start(async (ctx) => {
   ctx.reply(
     "Welcome to our service! We are excited to have you on board and look forward to supporting you. 😊"
   );
+  
   const userData = {
     username: ctx.update.message.from.username,
     name: ctx.update.message.from.first_name + " " + ctx.update.message.from.last_name,
@@ -92,7 +101,10 @@ await bot.telegram.sendPhoto( ctx.message.from.id,{url:imgurl},{caption:`Name: $
 
 
 })
-
+app.post("/webhook",(req,res)=>{
+  bot.handleUpdate(req.body); // Process the incoming update
+  res.sendStatus(200); // Respond to Telegram with a 200 OK.
+})
 bot.help((ctx)=>{
   count(ctx.update.message.from.id)
   ctx.reply('Bot Command:\n\n1.\t /now -\t\t Know your local weather immediately.\n2. /weather [Name of another city] -\t Know the weather of another city immediately.\n3. /setlocal [Name of your local city] -\t Set your local city.\n Further any problem contact our developer @avijit126');
