@@ -152,10 +152,17 @@ bot.on(message('text'), async (ctx) => {
 
 // Start the server with a dynamic port
 const PORT = process.env.PORT || 9000;
-app.listen(PORT, () => console.log(`Running on port ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`Server running on port ${PORT}`);
+  // Set up the webhook
+  await bot.telegram.setWebhook(webhookUrl);
+});
 
 bot.launch({
-  webhook: { domain: webhookUrl }
+  webhook: {
+    domain: webhookUrl,
+    hookPath: "/webhook", // Make sure the bot listens to the "/webhook" path
+  },
 });
 
 // Enable graceful stop
