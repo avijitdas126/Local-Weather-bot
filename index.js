@@ -4,7 +4,6 @@ const express=require("express");
 const app=express();
 require("dotenv").config();
 const {Telbot,Tel} =require('./modul')
-const safe=require('./safe');
 const bot = new Telegraf(process.env.BOT_TOKEN);
 let token=[process.env.OpenWeather_Token0,process.env.OpenWeather_Token1]
 function random(){
@@ -13,7 +12,7 @@ function random(){
    return ran
 }
 const webhookUrl = `${process.env.SERVER}/webhook`;
-app.use(await bot.createWebhook({domain:webhookUrl}));
+//app.use(await bot.createWebhook({domain:webhookUrl}));
 async function count(id) {
   try {
     // Find the user by their `userid`
@@ -97,6 +96,9 @@ await bot.telegram.sendPhoto( ctx.message.from.id,{url:imgurl},{caption:`Name: $
 
 
 })
+app.get('/',(req,res)=>{
+  res.send('I am alive');
+}
 app.post("/webhook",(req,res)=>{
   bot.handleUpdate(req.body); // Process the incoming update
   res.sendStatus(200); // Respond to Telegram with a 200 OK.
@@ -167,8 +169,11 @@ await bot.telegram.sendPhoto( ctx.message.from.id,{url:imgurl},{caption:`Name: $
   }
 })
 //launch a bot
-bot.launch();
+
 app.listen(9000,()=>console.log('Running at 9000'));
+bot.launch({
+  webhook:{domain:webhookUrl,port:9000}
+});
 // Enable graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
