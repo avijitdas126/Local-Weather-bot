@@ -12,7 +12,7 @@ function random(){
    let ran=Math.floor(Math.random()*n)
    return ran
 }
-const webhookUrl = `${process.env.SERVER}/webhook`;
+
 //app.use(await bot.createWebhook({domain:webhookUrl}));
 async function count(id) {
   try {
@@ -37,7 +37,7 @@ async function count(id) {
     console.log('Error occurred:', error);
   }
 }
-bot.telegram.setWebhook(webhookUrl)
+
 //when bot start
 bot.start(async (ctx) => {
   ctx.reply(
