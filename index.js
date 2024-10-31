@@ -98,11 +98,12 @@ await bot.telegram.sendPhoto( ctx.message.from.id,{url:imgurl},{caption:`Name: $
 })
 app.get('/',(req,res)=>{
   res.send('I am alive');
-}
-app.post("/webhook",(req,res)=>{
-  bot.handleUpdate(req.body); // Process the incoming update
-  res.sendStatus(200); // Respond to Telegram with a 200 OK.
 })
+// Webhook endpoint for Telegram
+app.post("/webhook", (req, res) => {
+  bot.handleUpdate(req.body);
+  res.sendStatus(200);
+});
 bot.help((ctx)=>{
   count(ctx.update.message.from.id)
   ctx.reply('Bot Command:\n\n1.\t /now -\t\t Know your local weather immediately.\n2. /weather [Name of another city] -\t Know the weather of another city immediately.\n3. /setlocal [Name of your local city] -\t Set your local city.\n Further any problem contact our developer @avijit126');
@@ -168,12 +169,14 @@ await bot.telegram.sendPhoto( ctx.message.from.id,{url:imgurl},{caption:`Name: $
     ctx.reply(`This bot only responsive on below this commands\n1.\t /now -\t\t Know your local weather immediately.\n2. /weather [Name of another city] -\t Know the weather of another city immediately.\n3. /setlocal [Name of your local city] -\t Set your local city.`)
   }
 })
-//launch a bot
+// Server setup
+app.listen(9000, () => console.log('Server running on port 9000'));
 
-app.listen(9000,()=>console.log('Running at 9000'));
+// Launch bot with webhook
 bot.launch({
-  webhook:{domain:webhookUrl,port:9000}
+  webhook: { domain: webhookUrl, port: 9000 }
 });
+
 // Enable graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
