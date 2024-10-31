@@ -168,7 +168,7 @@ await bot.telegram.sendPhoto( ctx.message.from.id,{url:imgurl},{caption:`Name: $
 })
 //launch a bot
 bot.launch();
-app.listen(9000,console.log('Running at 9000'));
+app.listen(9000,()=>console.log('Running at 9000'));
 // Enable graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
