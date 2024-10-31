@@ -107,6 +107,11 @@ app.post("/webhook", (req, res) => {
   res.sendStatus(200);
 });
 
+// Health check endpoint
+app.get('/ping', (req, res) => {
+  res.sendStatus(200);
+});
+
 // Help command
 bot.help((ctx) => {
   count(ctx.update.message.from.id);
@@ -194,7 +199,15 @@ async function setWebhookWithRetry(url) {
     attempts++;
   }
 }
-
+// Keep-alive interval to ping the server every 5 minutes
+setInterval(async () => {
+  try {
+    const response = await fetch(`${process.env.SERVER}/ping`);
+    if (response.ok) console.log('Keep-alive ping successful');
+  } catch (error) {
+    console.error('Keep-alive ping failed:', error);
+  }
+}, 20 * 60 * 1000); // 5 minutes
 // Start the server with a dynamic port
 const PORT = process.env.PORT || 9000;
 app.listen(PORT, async () => {
