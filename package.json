@@ -1,6 +1,6 @@
 {
   "name": "telegram",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -12,6 +12,7 @@
   "description": "",
   "dependencies": {
     "dotenv": "^16.4.5",
+    "express":"^4.21.1",
     "mongoose": "^8.6.2",
     "nodemon": "^3.1.4",
     "telegraf": "^4.16.3"
