@@ -3,17 +3,21 @@ const { message } = require("telegraf/filters");
 const express = require("express");
 require("dotenv").config();
 const { Telbot, Tel } = require('./modul'); // Import your database models
+
+
 const app = express();
 const bot = new Telegraf(process.env.BOT_TOKEN);
-let keepAliveInterval = 25 * 60 * 1000; // Start with 25 minutes
+let keepAliveInterval = 25 * 60 * 1000; // Default to 25 minutes
 let lastActivityTime = Date.now(); // Tracks the last time the bot was active
 let intervalID;
 
 // Enable parsing of JSON requests for Express
 app.use(express.json());
 
+// Array of OpenWeather tokens for API calls
 let token = [process.env.OpenWeather_Token0, process.env.OpenWeather_Token1];
 
+// Function to generate a random token
 function random() {
   return Math.floor(Math.random() * token.length);
 }
@@ -33,14 +37,14 @@ async function count(id) {
       console.log("User not found");
     }
   } catch (error) {
-    console.log("Error occurred:", error);
+    console.error("Error occurred:", error);
   }
 }
 
 // Start command
 bot.start(async (ctx) => {
   ctx.reply("Welcome to our service! We are excited to have you on board.");
-  
+
   const userData = {
     username: ctx.update.message.from.username,
     name: `${ctx.update.message.from.first_name} ${ctx.update.message.from.last_name}`,
@@ -56,7 +60,7 @@ bot.start(async (ctx) => {
     console.log("User inserted/updated successfully:");
     count(ctx.update.message.from.id);
   } catch (err) {
-    console.log("Error inserting/updating user:", err.message);
+    console.error("Error inserting/updating user:", err.message);
   }
 
   ctx.reply(
@@ -74,21 +78,21 @@ bot.hears('/now', async (ctx) => {
     city = city[0].local.toLowerCase();
     let data = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${token[random()]}&units=metric`);
     data = await data.json();
-    
+
     if (data.cod === 200) {
       let imgurl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
       let { temp } = data.main;
       let { speed: wind } = data.wind;
       let { description: weather } = data.weather[0];
       await ctx.deleteMessage(msgid);
-      
+
       try {
         await bot.telegram.sendPhoto(ctx.message.from.id, { url: imgurl }, {
           caption: `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`
         });
       } catch (err) {
         ctx.reply("We are facing some difficulties");
-        console.log(err);
+        console.error("Error sending photo:", err);
       }
     } else {
       await ctx.deleteMessage(msgid);
@@ -106,11 +110,14 @@ app.get("/", (req, res) => {
 
 // Webhook endpoint
 app.post("/webhook", (req, res) => {
-  
+  try {
     bot.handleUpdate(req.body);
-    lastActivityTime = Date.now();
-  
-  res.sendStatus(200);
+    lastActivityTime = Date.now(); // Update last activity time
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error handling update:", error);
+    res.sendStatus(500);
+  }
 });
 
 // Health check endpoint
@@ -122,7 +129,7 @@ app.get('/ping', (req, res) => {
 bot.help((ctx) => {
   count(ctx.update.message.from.id);
   ctx.reply(
-    "Bot Commands:\n\n1.\t /now -\t\t Know your local weather.\n2. /weather [City] -\t Weather of another city.\n3. /setlocal [Your City] -\t Set your local city."
+    "Bot Commands:\n\n1.\t /now -\t\t Know your local weather.\n2. /weather [City] -\t Weather of another city.\n3. /setlocal [City] -\t Set your local city."
   );
 });
 
@@ -140,7 +147,7 @@ bot.on(message("text"), async (ctx) => {
         ctx.reply("Your local city has been set successfully. Use /now to check the weather.");
       } catch (err) {
         ctx.reply("Unable to set your local city. Please try again.");
-        console.log("Error:", err.message);
+        console.error("Error:", err.message);
       }
     } else {
       ctx.reply("Use /setlocal [City] to set your city.\nExample: /setlocal Tokyo");
@@ -152,21 +159,21 @@ bot.on(message("text"), async (ctx) => {
     if (city) {
       let data = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${token[random()]}&units=metric`);
       data = await data.json();
-      
+
       if (data.cod === 200) {
         let imgurl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
         let { temp } = data.main;
         let { speed: wind } = data.wind;
         let { description: weather } = data.weather[0];
         await ctx.deleteMessage(msgid);
-        
+
         try {
           await bot.telegram.sendPhoto(ctx.message.from.id, { url: imgurl }, {
             caption: `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`
           });
         } catch (err) {
           ctx.reply("We are facing some difficulties");
-          console.log(err);
+          console.error("Error sending photo:", err);
         }
       } else {
         await ctx.deleteMessage(msgid);
@@ -198,13 +205,14 @@ async function setWebhookWithRetry(url) {
         console.log(`Rate limit hit, retrying after ${retryAfter} seconds...`);
         await new Promise(resolve => setTimeout(resolve, retryAfter * 1000)); // Wait before retrying
       } else {
-        console.log("Error setting webhook:", error);
+        console.error("Error setting webhook:", error);
         break; // Exit loop for other errors
       }
     }
     attempts++;
   }
 }
+
 // Dynamic keep-alive function
 function dynamicKeepAlive() {
   clearInterval(intervalID); // Clear previous interval if any
@@ -213,22 +221,17 @@ function dynamicKeepAlive() {
       const currentTime = Date.now();
       const timeSinceLastActivity = currentTime - lastActivityTime;
 
-      // Check if the bot has been active in the last 10 minutes
-      if (timeSinceLastActivity < 10 * 60 * 1000) {
-        keepAliveInterval = 5 * 60 * 1000; // 5 minutes during active periods
-      } else {
-        keepAliveInterval = 25 * 60 * 1000; // 25 minutes during idle periods
-      }
+      // Adjust keep-alive interval based on activity
+      keepAliveInterval = (timeSinceLastActivity < 10 * 60 * 1000) ? 5 * 60 * 1000 : 25 * 60 * 1000;
 
       // Ping the server
       const response = await fetch(`${process.env.SERVER}/ping`);
       if (response.ok) {
         console.log(`Keep-alive ping successful, interval: ${keepAliveInterval / 60000} minutes`);
       } else {
-        console.log("Keep-alive ping failed:", response.statusText);
+        console.error("Keep-alive ping failed:", response.statusText);
       }
 
-      dynamicKeepAlive(); // Reset the interval based on activity
     } catch (error) {
       console.error("Keep-alive ping error:", error);
     }
