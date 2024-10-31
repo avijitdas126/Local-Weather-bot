@@ -4,6 +4,7 @@ const express=require("express");
 const app=express();
 require("dotenv").config();
 const {Telbot,Tel} =require('./modul')
+const PORT = process.env.PORT || 9000; // Use dynamic port if available, otherwise fallback to 9000
 const bot = new Telegraf(process.env.BOT_TOKEN);
 let token=[process.env.OpenWeather_Token0,process.env.OpenWeather_Token1]
 function random(){
@@ -170,11 +171,11 @@ await bot.telegram.sendPhoto( ctx.message.from.id,{url:imgurl},{caption:`Name: $
   }
 })
 // Server setup
-app.listen(9000, () => console.log('Server running on port 9000'));
+app.listen(PORT, () => console.log(`Server running on port ${PORT} `));
 
 // Launch bot with webhook
 bot.launch({
-  webhook: { domain: webhookUrl, port: 9000 }
+  webhook: { domain: webhookUrl, port: PORT }
 });
 
 // Enable graceful stop
