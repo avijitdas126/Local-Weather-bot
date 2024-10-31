@@ -37,7 +37,7 @@ async function count(id) {
     console.log('Error occurred:', error);
   }
 }
-
+bot.telegram.setWebhook(webhookUrl)
 //when bot start
 bot.start(async (ctx) => {
   ctx.reply(
@@ -174,9 +174,7 @@ await bot.telegram.sendPhoto( ctx.message.from.id,{url:imgurl},{caption:`Name: $
 app.listen(PORT, () => console.log(`Server running on port ${PORT} `));
 
 // Launch bot with webhook
-bot.launch({
-  webhook: { domain: webhookUrl, port: PORT }
-});
+bot.launch();
 
 // Enable graceful stop
 process.once("SIGINT", () => bot.stop("SIGINT"));
