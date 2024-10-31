@@ -5,6 +5,9 @@ require("dotenv").config();
 const { Telbot, Tel } = require('./modul'); // Import your database models
 const app = express();
 const bot = new Telegraf(process.env.BOT_TOKEN);
+let keepAliveInterval = 25 * 60 * 1000; // Start with 25 minutes
+let lastActivityTime = Date.now(); // Tracks the last time the bot was active
+let intervalID;
 
 // Enable parsing of JSON requests for Express
 app.use(express.json());
@@ -101,9 +104,9 @@ app.get("/", (req, res) => {
   res.send("Bot is running!");
 });
 
-// Webhook endpoint
 app.post("/webhook", (req, res) => {
-  bot.handleUpdate(req.body); // Process the incoming update
+  bot.handleUpdate(req.body); // Process incoming updates
+  lastActivityTime = Date.now(); // Update last activity time
   res.sendStatus(200);
 });
 
@@ -199,15 +202,39 @@ async function setWebhookWithRetry(url) {
     attempts++;
   }
 }
-// Keep-alive interval to ping the server every 5 minutes
-setInterval(async () => {
-  try {
-    const response = await fetch(`${process.env.SERVER}/ping`);
-    if (response.ok) console.log('Keep-alive ping successful');
-  } catch (error) {
-    console.error('Keep-alive ping failed:', error);
-  }
-}, 20 * 60 * 1000); // 5 minutes
+// Dynamic keep-alive function
+function dynamicKeepAlive() {
+  clearInterval(intervalID); // Clear previous interval if any
+  intervalID = setInterval(async () => {
+    try {
+      const currentTime = Date.now();
+      const timeSinceLastActivity = currentTime - lastActivityTime;
+
+      // Check if the bot has been active in the last 10 minutes
+      if (timeSinceLastActivity < 10 * 60 * 1000) {
+        keepAliveInterval = 5 * 60 * 1000; // 5 minutes during active periods
+      } else {
+        keepAliveInterval = 25 * 60 * 1000; // 25 minutes during idle periods
+      }
+
+      // Ping the server
+      const response = await fetch(`${process.env.SERVER}/ping`);
+      if (response.ok) {
+        console.log(`Keep-alive ping successful, interval: ${keepAliveInterval / 60000} minutes`);
+      } else {
+        console.log("Keep-alive ping failed:", response.statusText);
+      }
+
+      dynamicKeepAlive(); // Reset the interval based on activity
+    } catch (error) {
+      console.error("Keep-alive ping error:", error);
+    }
+  }, keepAliveInterval);
+}
+
+// Initialize dynamic keep-alive on server start
+dynamicKeepAlive();
+
 // Start the server with a dynamic port
 const PORT = process.env.PORT || 9000;
 app.listen(PORT, async () => {
