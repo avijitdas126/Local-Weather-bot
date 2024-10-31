@@ -104,9 +104,19 @@ app.get("/", (req, res) => {
   res.send("Bot is running!");
 });
 
+// Webhook endpoint
 app.post("/webhook", (req, res) => {
-  bot.handleUpdate(req.body); // Process incoming updates
-  lastActivityTime = Date.now(); // Update last activity time
+  if (!bot.botInfo) {
+    // Bot is not running, so use polling to catch missed updates
+    console.log("Bot is not running; fetching missed updates via getUpdates.");
+    bot.telegram.getUpdates().then((updates) => {
+      updates.forEach((update) => bot.handleUpdate(update));
+    }).catch((error) => console.error("Error in getUpdates:", error));
+  } else {
+    // Handle update if bot is running
+    bot.handleUpdate(req.body);
+    lastActivityTime = Date.now();
+  }
   res.sendStatus(200);
 });
 
