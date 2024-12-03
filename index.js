@@ -15,18 +15,18 @@ let intervalID;
 app.use(express.json());
 
 // Array of OpenWeather tokens for API calls
-const tokens = [process.env.OpenWeather_Token0, process.env.OpenWeather_Token1];
+let token = [process.env.OpenWeather_Token0, process.env.OpenWeather_Token1];
 
 // Function to generate a random token
-function randomToken() {
-  return tokens[Math.floor(Math.random() * tokens.length)];
+function random() {
+  return Math.floor(Math.random() * token.length);
 }
 
 // Set the webhook URL
 const webhookUrl = `${process.env.SERVER}/webhook`;
 
 // Function to count user interactions
-async function countUserInteraction(id) {
+async function count(id) {
   try {
     const user = await Telbot.findOne({ userid: id });
     if (user) {
@@ -37,7 +37,7 @@ async function countUserInteraction(id) {
       console.log("User not found");
     }
   } catch (error) {
-    console.error("Error occurred while updating count:", error);
+    console.error("Error occurred:", error);
   }
 }
 
@@ -47,7 +47,7 @@ bot.start(async (ctx) => {
 
   const userData = {
     username: ctx.update.message.from.username,
-    name: `${ctx.update.message.from.first_name} ${ctx.update.message.from.last_name || ''}`,
+    name: `${ctx.update.message.from.first_name} ${ctx.update.message.from.last_name}`,
     userid: ctx.update.message.from.id,
   };
 
@@ -57,113 +57,197 @@ bot.start(async (ctx) => {
       userData,
       { new: true, upsert: true }
     );
-    console.log("User inserted/updated successfully.");
-    countUserInteraction(ctx.update.message.from.id);
+    console.log("User inserted/updated successfully:");
+    count(ctx.update.message.from.id);
   } catch (err) {
     console.error("Error inserting/updating user:", err.message);
   }
 
   ctx.reply(
-    "Bot Commands:\n\n" +
-    "1. /now - Know your local weather.\n" +
-    "2. /weather [City] - Get weather of another city.\n" +
-    "3. /setlocal [Your City] - Set your local city."
+    "Bot Commands:\n\n1.\t /now -\t\t Know your local weather.\n2. /weather [City] -\t Weather of another city.\n3. /setlocal [Your City] -\t Set your local city."
   );
 });
 
 // Handle /now command
 bot.hears('/now', async (ctx) => {
-  const userId = ctx.update.message.from.id;
-  countUserInteraction(userId);
+  let city = await Tel.find({ userid: ctx.update.message.from.id });
+  count(ctx.update.message.from.id);
 
-  let userCity = await Tel.findOne({ userid: userId });
-  if (!userCity) {
-    return ctx.reply("First, set your local city using /setlocal [City]");
-  }
+  if (city.length !== 0) {
+    let { message_id: msgid } = await ctx.replyWithSticker('CAACAgIAAxkBAAIBmmbmtyxl__PM1i4wsKcHKljraZGsAAIwFAACV03ASHMUDFXjRXH1NgQ');
+    city = city[0].local.toLowerCase();
+    let data = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${token[random()]}&units=metric`);
+    data = await data.json();
 
-  userCity = userCity.local.toLowerCase();
-  const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${userCity}&appid=${randomToken()}&units=metric`);
-  const data = await response.json();
+    if (data.cod === 200) {
+      let imgurl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+      let { temp } = data.main;
+      let { speed: wind } = data.wind;
+      let { description: weather } = data.weather[0];
+      await ctx.deleteMessage(msgid);
 
-  if (data.cod === 200) {
-    const imgurl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
-    const weatherInfo = `
-Name: ${data.name}
-Temperature: ${data.main.temp}°C
-Wind: ${data.wind.speed} kph
-Weather: ${data.weather[0].description}
-Humidity: ${data.main.humidity}%
-Country: ${data.sys.country}`;
-
-    try {
-      await bot.telegram.sendPhoto(ctx.chat.id, { url: imgurl }, { caption: weatherInfo });
-    } catch (error) {
-      console.error("Error sending photo:", error);
-      ctx.reply("We are facing some difficulties. Please try again later.");
+      try {
+        await bot.telegram.sendPhoto(ctx.chat.id, { url: imgurl }, {
+          caption: `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`
+        });
+      } catch (err) {
+        ctx.reply("We are facing some difficulties");
+        console.error("Error sending photo:", err);
+      }
+    } else {
+      await ctx.deleteMessage(msgid);
+      ctx.reply(`${data.message}. Set your local city using /setlocal [City]`);
     }
   } else {
-    ctx.reply(`${data.message}. Set your local city using /setlocal [City]`);
+    ctx.reply("First, set your local city using /setlocal [City]");
   }
 });
 
-// Handle /setlocal command
-bot.hears(/^\/setlocal (.+)/, async (ctx) => {
-  const userId = ctx.update.message.from.id;
-  const city = ctx.match[1].trim();
-
-  countUserInteraction(userId);
-
-  try {
-    await Tel.findOneAndUpdate({ userid: userId }, { userid: userId, local: city }, { new: true, upsert: true });
-    ctx.reply("Your local city has been set successfully. Use /now to check the weather.");
-  } catch (err) {
-    console.error("Error setting local city:", err);
-    ctx.reply("Unable to set your local city. Please try again.");
-  }
-});
-
-// Handle /weather command
-bot.hears(/^\/weather (.+)/, async (ctx) => {
-  const city = ctx.match[1].trim();
-  countUserInteraction(ctx.update.message.from.id);
-
-  const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${randomToken()}&units=metric`);
-  const data = await response.json();
-
-  if (data.cod === 200) {
-    const imgurl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
-    const weatherInfo = `
-Name: ${data.name}
-Temperature: ${data.main.temp}°C
-Wind: ${data.wind.speed} kph
-Weather: ${data.weather[0].description}
-Humidity: ${data.main.humidity}%
-Country: ${data.sys.country}`;
-
-    try {
-      await bot.telegram.sendPhoto(ctx.chat.id, { url: imgurl }, { caption: weatherInfo });
-    } catch (error) {
-      console.error("Error sending photo:", error);
-      ctx.reply("We are facing some difficulties. Please try again later.");
-    }
-  } else {
-    ctx.reply(`${data.message}. Use /weather [City] to check another city's weather.`);
-  }
+// Basic endpoint to check if the bot is running
+app.get("/", (req, res) => {
+  res.send("Bot is running!");
 });
 
 // Webhook endpoint
 app.post("/webhook", (req, res) => {
-  bot.handleUpdate(req.body);
-  lastActivityTime = Date.now();
-  res.sendStatus(200);
+  try {
+    bot.handleUpdate(req.body);
+    lastActivityTime = Date.now(); // Update last activity time
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error handling update:", error);
+    res.sendStatus(500);
+  }
 });
 
 // Health check endpoint
-app.get('/ping', (req, res) => res.sendStatus(200));
+app.get('/ping', (req, res) => {
+  res.sendStatus(200);
+});
 
-// Start the server
+// Help command
+bot.help((ctx) => {
+  count(ctx.update.message.from.id);
+  ctx.reply(
+    "Bot Commands:\n\n1.\t /now -\t\t Know your local weather.\n2. /weather [City] -\t Weather of another city.\n3. /setlocal [City] -\t Set your local city."
+  );
+});
+
+// Handle text messages
+bot.on(message("text"), async (ctx) => {
+  let text = ctx.update.message.text;
+  if (text.startsWith("/setlocal")) {
+    count(ctx.update.message.from.id);
+    let city = text.split("/setlocal ")[1];
+    if (city) {
+      let id = ctx.update.message.from.id;
+      let obj = { userid: id, local: city };
+      try {
+        await Tel.findOneAndUpdate({ userid: id }, obj, { new: true, upsert: true });
+        ctx.reply("Your local city has been set successfully. Use /now to check the weather.");
+      } catch (err) {
+        ctx.reply("Unable to set your local city. Please try again.");
+        console.error("Error:", err.message);
+      }
+    } else {
+      ctx.reply("Use /setlocal [City] to set your city.\nExample: /setlocal Tokyo");
+    }
+  } else if (text.startsWith("/weather")) {
+    count(ctx.update.message.from.id);
+    let { message_id: msgid } = await ctx.replyWithSticker('CAACAgIAAxkBAAIBmmbmtyxl__PM1i4wsKcHKljraZGsAAIwFAACV03ASHMUDFXjRXH1NgQ');
+    let city = text.split("/weather ")[1];
+    if (city) {
+      let data = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${token[random()]}&units=metric`);
+      data = await data.json();
+
+      if (data.cod === 200) {
+        let imgurl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+        let { temp } = data.main;
+        let { speed: wind } = data.wind;
+        let { description: weather } = data.weather[0];
+        await ctx.deleteMessage(msgid);
+
+        try {
+          await bot.telegram.sendPhoto(ctx.chat.id, { url: imgurl }, {
+            caption: `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`
+          });
+        } catch (err) {
+          ctx.reply("We are facing some difficulties");
+          console.error("Error sending photo:", err);
+        }
+      } else {
+        await ctx.deleteMessage(msgid);
+        ctx.reply(`${data.message}. Use /weather [City] for other cities.`);
+      }
+    } else {
+      await ctx.deleteMessage(msgid);
+      ctx.reply("Use /weather [City] for other cities.\nExample: /weather Tokyo");
+    }
+  } else {
+    count(ctx.update.message.from.id);
+    ctx.reply("Available Commands:\n1.\t /now -\t\t Know your local weather.\n2. /weather [City] -\t Weather of another city.\n3. /setlocal [City] -\t Set your local city.");
+  }
+});
+
+// Function to set the webhook with retry logic
+async function setWebhookWithRetry(url) {
+  const maxRetries = 5;
+  let attempts = 0;
+
+  while (attempts < maxRetries) {
+    try {
+      await bot.telegram.setWebhook(url);
+      console.log(`Webhook set to: ${url}`);
+      break; // If successful, exit the loop
+    } catch (error) {
+      if (error.code === 429) {
+        const retryAfter = error.parameters.retry_after || 1; // Extract retry time or default to 1 second
+        console.log(`Rate limit hit, retrying after ${retryAfter} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000)); // Wait before retrying
+      } else {
+        console.error("Error setting webhook:", error);
+        break; // Exit loop for other errors
+      }
+    }
+    attempts++;
+  }
+}
+
+// Dynamic keep-alive function
+function dynamicKeepAlive() {
+  clearInterval(intervalID); // Clear previous interval if any
+  intervalID = setInterval(async () => {
+    try {
+      const currentTime = Date.now();
+      const timeSinceLastActivity = currentTime - lastActivityTime;
+
+      // Adjust keep-alive interval based on activity
+      keepAliveInterval = (timeSinceLastActivity < 10 * 60 * 1000) ? 5 * 60 * 1000 : 25 * 60 * 1000;
+
+      // Ping the server
+      const response = await fetch(`${process.env.SERVER}/ping`);
+      if (response.ok) {
+        console.log(`Keep-alive ping successful, interval: ${keepAliveInterval / 60000} minutes`);
+      } else {
+        console.error("Keep-alive ping failed:", response.statusText);
+      }
+
+    } catch (error) {
+      console.error("Keep-alive ping error:", error);
+    }
+  }, keepAliveInterval);
+}
+
+// Initialize dynamic keep-alive on server start
+dynamicKeepAlive();
+
+// Start the server with a dynamic port
 const PORT = process.env.PORT || 9000;
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  await bot.telegram.setWebhook(webhookUrl);
+  await setWebhookWithRetry(webhookUrl); // Set the webhook with retry logic
 });
+
+// Enable graceful stop
+process.once("SIGINT", () => bot.stop("SIGINT"));
+process.once("SIGTERM", () => bot.stop("SIGTERM"));
