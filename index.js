@@ -60,7 +60,8 @@ async function sendWeatherPhoto(chatId, imgUrl, caption) {
     await bot.telegram.sendPhoto(chatId, { url: imgUrl }, { caption });
   } catch (err) {
     console.error("Error sending photo:", err.message);
-    await bot.telegram.sendMessage(chatId, "We encountered an error sending the weather image. Please try again.");
+   // await bot.telegram.sendMessage(chatId, "We encountered an error sending the weather image. Please try again.");
+ await bot.telegram.sendMessage(chatId,caption);
   }
 }
 
