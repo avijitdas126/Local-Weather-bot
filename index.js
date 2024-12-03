@@ -22,6 +22,17 @@ function random() {
   return Math.floor(Math.random() * token.length);
 }
 
+// Utility function to validate URLs
+async function isValidUrl(url) {
+  try {
+    const response = await fetch(url, { method: 'HEAD' });
+    return response.ok;
+  } catch (err) {
+    console.error(`Invalid URL: ${url}`, err);
+    return false;
+  }
+}
+
 // Set the webhook URL
 const webhookUrl = `${process.env.SERVER}/webhook`;
 
@@ -38,6 +49,18 @@ async function count(id) {
     }
   } catch (error) {
     console.error("Error occurred:", error);
+  }
+}
+
+// Function to send a weather photo
+async function sendWeatherPhoto(chatId, imgUrl, caption) {
+  try {
+    const isValid = await isValidUrl(imgUrl);
+    if (!isValid) throw new Error("Invalid image URL");
+    await bot.telegram.sendPhoto(chatId, { url: imgUrl }, { caption });
+  } catch (err) {
+    console.error("Error sending photo:", err.message);
+    await bot.telegram.sendMessage(chatId, "We encountered an error sending the weather image. Please try again.");
   }
 }
 
@@ -71,7 +94,6 @@ bot.start(async (ctx) => {
 // Handle /now command
 bot.hears('/now', async (ctx) => {
   let city = await Tel.find({ userid: ctx.update.message.from.id });
-  count(ctx.update.message.from.id);
 
   if (city.length !== 0) {
     let { message_id: msgid } = await ctx.replyWithSticker('CAACAgIAAxkBAAIBmmbmtyxl__PM1i4wsKcHKljraZGsAAIwFAACV03ASHMUDFXjRXH1NgQ');
@@ -86,14 +108,8 @@ bot.hears('/now', async (ctx) => {
       let { description: weather } = data.weather[0];
       await ctx.deleteMessage(msgid);
 
-      try {
-        await bot.telegram.sendPhoto(ctx.chat.id, { url: imgurl }, {
-          caption: `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`
-        });
-      } catch (err) {
-        ctx.reply("We are facing some difficulties");
-        console.error("Error sending photo:", err);
-      }
+      const caption = `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`;
+      await sendWeatherPhoto(ctx.chat.id, imgurl, caption);
     } else {
       await ctx.deleteMessage(msgid);
       ctx.reply(`${data.message}. Set your local city using /setlocal [City]`);
@@ -101,28 +117,6 @@ bot.hears('/now', async (ctx) => {
   } else {
     ctx.reply("First, set your local city using /setlocal [City]");
   }
-});
-
-// Basic endpoint to check if the bot is running
-app.get("/", (req, res) => {
-  res.send("Bot is running!");
-});
-
-// Webhook endpoint
-app.post("/webhook", (req, res) => {
-  try {
-    bot.handleUpdate(req.body);
-    lastActivityTime = Date.now(); // Update last activity time
-    res.sendStatus(200);
-  } catch (error) {
-    console.error("Error handling update:", error);
-    res.sendStatus(500);
-  }
-});
-
-// Health check endpoint
-app.get('/ping', (req, res) => {
-  res.sendStatus(200);
 });
 
 // Help command
@@ -154,7 +148,6 @@ bot.on(message("text"), async (ctx) => {
     }
   } else if (text.startsWith("/weather")) {
     count(ctx.update.message.from.id);
-    let { message_id: msgid } = await ctx.replyWithSticker('CAACAgIAAxkBAAIBmmbmtyxl__PM1i4wsKcHKljraZGsAAIwFAACV03ASHMUDFXjRXH1NgQ');
     let city = text.split("/weather ")[1];
     if (city) {
       let data = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${token[random()]}&units=metric`);
@@ -165,22 +158,13 @@ bot.on(message("text"), async (ctx) => {
         let { temp } = data.main;
         let { speed: wind } = data.wind;
         let { description: weather } = data.weather[0];
-        await ctx.deleteMessage(msgid);
 
-        try {
-          await bot.telegram.sendPhoto(ctx.chat.id, { url: imgurl }, {
-            caption: `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`
-          });
-        } catch (err) {
-          ctx.reply("We are facing some difficulties");
-          console.error("Error sending photo:", err);
-        }
+        const caption = `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`;
+        await sendWeatherPhoto(ctx.chat.id, imgurl, caption);
       } else {
-        await ctx.deleteMessage(msgid);
         ctx.reply(`${data.message}. Use /weather [City] for other cities.`);
       }
     } else {
-      await ctx.deleteMessage(msgid);
       ctx.reply("Use /weather [City] for other cities.\nExample: /weather Tokyo");
     }
   } else {
@@ -189,7 +173,24 @@ bot.on(message("text"), async (ctx) => {
   }
 });
 
-// Function to set the webhook with retry logic
+// Webhook endpoint
+app.post("/webhook", (req, res) => {
+  try {
+    bot.handleUpdate(req.body);
+    lastActivityTime = Date.now(); // Update last activity time
+    res.sendStatus(200);
+  } catch (error) {
+    console.error("Error handling update:", error);
+    res.sendStatus(500);
+  }
+});
+
+// Basic endpoint to check if the bot is running
+app.get("/", (req, res) => {
+  res.send("Bot is running!");
+});
+
+// Set the webhook with retry logic
 async function setWebhookWithRetry(url) {
   const maxRetries = 5;
   let attempts = 0;
@@ -213,39 +214,11 @@ async function setWebhookWithRetry(url) {
   }
 }
 
-// Dynamic keep-alive function
-function dynamicKeepAlive() {
-  clearInterval(intervalID); // Clear previous interval if any
-  intervalID = setInterval(async () => {
-    try {
-      const currentTime = Date.now();
-      const timeSinceLastActivity = currentTime - lastActivityTime;
-
-      // Adjust keep-alive interval based on activity
-      keepAliveInterval = (timeSinceLastActivity < 10 * 60 * 1000) ? 5 * 60 * 1000 : 25 * 60 * 1000;
-
-      // Ping the server
-      const response = await fetch(`${process.env.SERVER}/ping`);
-      if (response.ok) {
-        console.log(`Keep-alive ping successful, interval: ${keepAliveInterval / 60000} minutes`);
-      } else {
-        console.error("Keep-alive ping failed:", response.statusText);
-      }
-
-    } catch (error) {
-      console.error("Keep-alive ping error:", error);
-    }
-  }, keepAliveInterval);
-}
-
-// Initialize dynamic keep-alive on server start
-dynamicKeepAlive();
-
-// Start the server with a dynamic port
+// Start the server
 const PORT = process.env.PORT || 9000;
 app.listen(PORT, async () => {
   console.log(`Server running on port ${PORT}`);
-  await setWebhookWithRetry(webhookUrl); // Set the webhook with retry logic
+  await setWebhookWithRetry(webhookUrl);
 });
 
 // Enable graceful stop
