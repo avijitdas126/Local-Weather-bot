@@ -104,12 +104,12 @@ bot.hears('/now', async (ctx) => {
 
     if (data.cod === 200) {
       let imgurl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
-      let { temp } = data.main;
+      let { temp,feels_like,temp_max,temp_min } = data.main;
       let { speed: wind } = data.wind;
       let { description: weather } = data.weather[0];
       await ctx.deleteMessage(msgid);
 
-      const caption = `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`;
+      const caption = `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nMinimum Temperature:${temp_min}°C\nMaximum Temperature:${temp_max}°C\nFeels Like:${feels_like}°C \nCountry: ${data.sys.country}`;
       await sendWeatherPhoto(ctx.chat.id, imgurl, caption);
     } else {
       await ctx.deleteMessage(msgid);
@@ -156,11 +156,11 @@ bot.on(message("text"), async (ctx) => {
 
       if (data.cod === 200) {
         let imgurl = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
-        let { temp } = data.main;
+        let { temp,feels_like,temp_max,temp_min } = data.main;
         let { speed: wind } = data.wind;
         let { description: weather } = data.weather[0];
 
-        const caption = `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nCountry: ${data.sys.country}`;
+        const caption = `Name: ${data.name}\nTemperature: ${temp}°C\nWind: ${wind} kph\nWeather: ${weather}\nHumidity: ${data.main.humidity}%\nMinimum Temperature:${temp_min}°C\nMaximum Temperature:${temp_max}°C\nFeels Like:${feels_like}°C \nCountry: ${data.sys.country}`;
         await sendWeatherPhoto(ctx.chat.id, imgurl, caption);
       } else {
         ctx.reply(`${data.message}. Use /weather [City] for other cities.`);
